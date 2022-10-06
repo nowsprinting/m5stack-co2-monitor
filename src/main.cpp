@@ -15,6 +15,8 @@ void setup() {
     //The SCD30 has data ready every two seconds
 }
 
+unsigned long lastMeasure = 0; // 前回計測ms
+
 uint16_t co2 = NAN;
 uint16_t lastCo2 = NAN;
 float temp = NAN;
@@ -39,11 +41,12 @@ void displayLcd() {
     M5.Lcd.printf("Hum %5.1f %%\n", hum);
 }
 
-unsigned long lastMillis = NAN;
-
 void loop() {
-    measureSCD30();
-    displayLcd();
+    unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策
 
-    delay(2000);
+    if ((now - lastMeasure) > 2000) {
+        measureSCD30();
+        displayLcd();
+        lastMeasure = now;
+    }
 }
