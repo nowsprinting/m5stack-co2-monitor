@@ -56,25 +56,25 @@ void displayLcd() {
     M5.Lcd.printf("Hum %5.1f %%\n", hum);
 }
 
-unsigned long lastMeasure = 0; // 前回センサ計測ms
-unsigned long lastAmbient = 0; // 前回Ambient送信ms
+unsigned long nextMeasureTime = 0; // 次回センサ計測ms
+unsigned long nextAmbientTime = 0; // 次回Ambient送信ms
 
 void loop() {
     unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策が必要
 
-    if (lastMeasure == 0 || (now - lastMeasure) > 5000) {
+    if (now > nextMeasureTime) {
         measureSCD30();
         displayLcd();
-        lastMeasure = now;
         Serial.println("measure");
+        nextMeasureTime = now + 5000;
     }
 
-    if (lastAmbient == 0 || (now - lastAmbient) > 60000) {
+    if (now > nextAmbientTime) {
         ambient.set(1, co2);
         ambient.set(2, temp);
         ambient.set(3, hum);
         ambient.send();
-        lastAmbient = now;
         Serial.println("send");
+        nextAmbientTime = now + 60000;
     }
 }
