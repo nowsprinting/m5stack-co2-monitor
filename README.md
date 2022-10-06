@@ -20,6 +20,7 @@ NDIR方式のCO2センサ、温湿度センサ
 - PWM
 - SEL
 
+I2Cアドレス：0x61
 
 
 ## How to development
