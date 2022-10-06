@@ -5,17 +5,32 @@
 
 SCD30 scd30;
 
+WiFiClient client;
+Ambient ambient;
+
 void setup() {
     M5.begin(true, false, true, true);
 
+    M5.Lcd.println("Initializing SCD30 sensor");
     if (scd30.begin() == false) {
         M5.Lcd.println("Air sensor not detected. Please check wiring. Freezing...");
         while (1);
     }
     //The SCD30 has data ready every two seconds
-}
 
-unsigned long lastMeasure = 0; // 前回計測ms
+    M5.Lcd.print("Initializing Wi-Fi");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  //  Wi-Fi APに接続
+    while (WiFi.status() != WL_CONNECTED) {  //  Wi-Fi AP接続待ち
+        delay(500);
+        M5.Lcd.print(".");
+    }
+    M5.Lcd.println();
+    M5.Lcd.printf("Wi-Fi connected. IP address: ");
+    M5.Lcd.println(WiFi.localIP());
+
+    M5.Lcd.print("Initializing Ambient");
+    ambient.begin(AMBIENT_CHANNEL_ID, AMBIENT_WRITE_KEY, &client); // チャネルIDとライトキーを指定してAmbientの初期化
+}
 
 uint16_t co2 = NAN;
 uint16_t lastCo2 = NAN;
@@ -37,16 +52,29 @@ void displayLcd() {
     M5.Lcd.setTextSize(4);
     M5.Lcd.printf("CO2 %5d ppm\n", co2);
     M5.Lcd.println();
-    M5.Lcd.printf("Tmp %5.1f c\n", temp);
+    M5.Lcd.printf("Tmp %5.1f 'c\n", temp);
     M5.Lcd.printf("Hum %5.1f %%\n", hum);
 }
 
-void loop() {
-    unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策
+unsigned long lastMeasure = 0; // 前回センサ計測ms
+unsigned long lastAmbient = 0; // 前回Ambient送信ms
 
-    if ((now - lastMeasure) > 2000) {
+void loop() {
+    unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策が必要
+
+    if (lastMeasure == 0 || (now - lastMeasure) > 5000) {
         measureSCD30();
         displayLcd();
         lastMeasure = now;
+        Serial.println("measure");
+    }
+
+    if (lastAmbient == 0 || (now - lastAmbient) > 60000) {
+        ambient.set(1, co2);
+        ambient.set(2, temp);
+        ambient.set(3, hum);
+        ambient.send();
+        lastAmbient = now;
+        Serial.println("send");
     }
 }
