@@ -42,6 +42,8 @@ struct scd30_measured_values {
 scd30_measured_values values;
 uint16_t lastCo2 = NAN;
 
+bool lastAmbientSendResult = true;
+
 void measureSCD30(scd30_measured_values &values) {
     if (scd30.dataAvailable()) {
         values.co2 = scd30.getCO2();
@@ -55,18 +57,21 @@ void displayBatteryLevel() {
     if (level < 0) {
         return;
     }
-    switch (level) {
-        case 100:
-            M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-            break;
-        case 75:
-        case 50:
-            M5.Lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
-            break;
-        default:
-            M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+    if (level <= 25) {
+        M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+    } else if (level <= 75) {
+        M5.Lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
+    } else {
+        M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
     }
-    M5.Lcd.printf("Battery %d%%", level);
+    M5.Lcd.printf("Battery %d%%\n", level);
+}
+
+void displayError() {
+    if (!lastAmbientSendResult) {
+        M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+        M5.Lcd.printf("Ambient send error!\n");
+    }
 }
 
 void displayLcd(scd30_measured_values &values) {
@@ -82,8 +87,8 @@ void displayLcd(scd30_measured_values &values) {
     // 以下、ステータス系
     M5.Lcd.println();
     M5.Lcd.setTextSize(2);
-
     displayBatteryLevel();
+    displayError();
 }
 
 unsigned long nextMeasureTime = 0; // 次回センサ計測ms
@@ -104,13 +109,7 @@ void loop() {
         ambient.set(1, values.co2);
         ambient.set(2, values.temp);
         ambient.set(3, values.hum);
-        bool ret = ambient.send();
-        if (ret) {
-            Serial.println("send");
-
-        } else {
-            Serial.println("send error!");
-        }
+        lastAmbientSendResult = ambient.send();
         nextAmbientTime = now + 60000;
     }
 }
