@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include <M5Stack.h>
 #include <SparkFun_SCD30_Arduino_Library.h>
+#include <SparkFunBME280.h>
 #include <Ambient.h>
 
 SCD30 scd30;
+BME280 bme280;
 
 WiFiClient client;
 Ambient ambient;
@@ -18,6 +20,14 @@ void setup() {
         while (1);
     }
     //The SCD30 has data ready every two seconds
+
+    M5.Lcd.println("Initializing BME280 sensor");
+    bme280.setI2CAddress(0x76);
+    if (bme280.beginI2C() == false) //Begin communication over I2C
+    {
+        Serial.println("The sensor did not respond. Please check wiring.");
+        while (1); //Freeze
+    }
 
     M5.Lcd.print("Initializing Wi-Fi");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  //  Wi-Fi APに接続
@@ -39,10 +49,8 @@ struct scd30_measured_values {
     float hum = NAN;
 };
 
-scd30_measured_values values;
+scd30_measured_values scd30values;
 uint16_t lastCo2 = NAN;
-
-bool lastAmbientSendResult = true;
 
 void measureSCD30(scd30_measured_values &values) {
     if (scd30.dataAvailable()) {
@@ -51,6 +59,22 @@ void measureSCD30(scd30_measured_values &values) {
         values.hum = scd30.getHumidity();
     }
 }
+
+struct bme280_measured_values {
+    float pressure = NAN;
+    float temp = NAN;
+    float hum = NAN;
+};
+
+bme280_measured_values bme280values;
+
+void measureBME280(bme280_measured_values &values) {
+    values.pressure = bme280.readFloatPressure();
+    values.temp = bme280.readTempC();
+    values.hum = bme280.readFloatHumidity();
+}
+
+bool lastAmbientSendResult = true;
 
 void displayBatteryLevel() {
     int8_t level = M5.Power.getBatteryLevel();
@@ -74,15 +98,23 @@ void displayError() {
     }
 }
 
-void displayLcd(scd30_measured_values &values) {
+void displayLcd(scd30_measured_values &scd30values, bme280_measured_values &bme280values) {
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
     M5.Lcd.setTextSize(4);
-    M5.Lcd.printf("CO2 %5d ppm\n", values.co2);
+
+    // SCD30
+    M5.Lcd.printf("CO2 %5d ppm\n", scd30values.co2);
     M5.Lcd.println();
-    M5.Lcd.printf("Tmp %5.1f 'c\n", values.temp);
-    M5.Lcd.printf("Hum %5.1f %%\n", values.hum);
+    M5.Lcd.printf("Tmp %5.1f 'c\n", scd30values.temp);
+    M5.Lcd.printf("Hum %5.1f %%\n", scd30values.hum);
+
+    // BME280
+    M5.Lcd.println();
+    M5.Lcd.setTextSize(2);
+    M5.Lcd.printf("Prs %5d hPa\n", bme280values.pressure);
+    M5.Lcd.printf("Tmp %5.1f 'c  Hum %5.1f %%\n", bme280values.temp, bme280values.hum);
 
     // 以下、ステータス系
     M5.Lcd.println();
@@ -99,16 +131,16 @@ void loop() {
     unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策が必要
 
     if (now > nextMeasureTime) {
-        measureSCD30(values);
-        displayLcd(values);
-        Serial.println("measure");
+        measureSCD30(scd30values);
+        measureBME280(bme280values);
+        displayLcd(scd30values, bme280values);
         nextMeasureTime = now + 5000;
     }
 
     if (now > nextAmbientTime) {
-        ambient.set(1, values.co2);
-        ambient.set(2, values.temp);
-        ambient.set(3, values.hum);
+        ambient.set(1, scd30values.co2);
+        ambient.set(2, scd30values.temp);
+        ambient.set(3, scd30values.hum);
         lastAmbientSendResult = ambient.send();
         nextAmbientTime = now + 60000;
     }

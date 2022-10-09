@@ -4,7 +4,7 @@
 
 ## Hardware
 
-### [SCD30](https://www.sparkfun.com/products/15112)
+### SCD30
 
 NDIR方式のCO2センサ、温湿度センサ
 
@@ -12,15 +12,29 @@ NDIR方式のCO2センサ、温湿度センサ
 
 #### SCD30 - M5Stack結線
 
-- VDD - 3.3V
-- GND - GND
-- TX/SCL
-- RX/SDA - G21
-- RDY
-- PWM
-- SEL
+1. VDD - 3.3V
+1. GND - GND
+1. TX/SCL
+1. RX/SDA - G21
+1. RDY
+1. PWM
+1. SEL
 
 I2Cアドレス：0x61
+
+
+### BME280
+
+温湿度・気圧センサ。J3をジャンパしてI2Cで使用
+
+#### BME280 - M5Stack結線
+
+1. VDD - 3.3V
+2. GND - GND
+3. 未使用
+4. SDA - G21
+5. これをGNDと短絡するとI2Cアドレス0x76、VDDだと0x77
+6. SCL - G22
 
 
 
