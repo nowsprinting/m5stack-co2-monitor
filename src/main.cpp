@@ -32,47 +32,52 @@ void setup() {
     ambient.begin(AMBIENT_CHANNEL_ID, AMBIENT_WRITE_KEY, &client); // チャネルIDとライトキーを指定してAmbientの初期化
 }
 
-uint16_t co2 = NAN;
-uint16_t lastCo2 = NAN;
-float temp = NAN;
-float hum = NAN;
+struct scd30_measured_values {
+    uint16_t co2 = NAN;
+    float temp = NAN;
+    float hum = NAN;
+};
 
-void measureSCD30() {
+scd30_measured_values values;
+uint16_t lastCo2 = NAN;
+
+void measureSCD30(scd30_measured_values &values) {
     if (scd30.dataAvailable()) {
-        co2 = scd30.getCO2();
-        temp = scd30.getTemperature();
-        hum = scd30.getHumidity();
+        values.co2 = scd30.getCO2();
+        values.temp = scd30.getTemperature();
+        values.hum = scd30.getHumidity();
     }
 }
 
-void displayLcd() {
+void displayLcd(scd30_measured_values &values) {
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
     M5.Lcd.setTextSize(4);
-    M5.Lcd.printf("CO2 %5d ppm\n", co2);
+    M5.Lcd.printf("CO2 %5d ppm\n", values.co2);
     M5.Lcd.println();
-    M5.Lcd.printf("Tmp %5.1f 'c\n", temp);
-    M5.Lcd.printf("Hum %5.1f %%\n", hum);
+    M5.Lcd.printf("Tmp %5.1f 'c\n", values.temp);
+    M5.Lcd.printf("Hum %5.1f %%\n", values.hum);
 }
 
 unsigned long nextMeasureTime = 0; // 次回センサ計測ms
 unsigned long nextAmbientTime = 0; // 次回Ambient送信ms
 
 void loop() {
+    M5.update();
     unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策が必要
 
     if (now > nextMeasureTime) {
-        measureSCD30();
-        displayLcd();
+        measureSCD30(values);
+        displayLcd(values);
         Serial.println("measure");
         nextMeasureTime = now + 5000;
     }
 
     if (now > nextAmbientTime) {
-        ambient.set(1, co2);
-        ambient.set(2, temp);
-        ambient.set(3, hum);
+        ambient.set(1, values.co2);
+        ambient.set(2, values.temp);
+        ambient.set(3, values.hum);
         ambient.send();
         Serial.println("send");
         nextAmbientTime = now + 60000;
