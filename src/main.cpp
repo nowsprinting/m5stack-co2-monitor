@@ -11,6 +11,7 @@ Ambient ambient;
 void setup() {
     M5.begin(true, false, true, true);
 
+    M5.Lcd.setTextSize(2);
     M5.Lcd.println("Initializing SCD30 sensor");
     if (scd30.begin() == false) {
         M5.Lcd.println("Air sensor not detected. Please check wiring. Freezing...");
@@ -49,6 +50,25 @@ void measureSCD30(scd30_measured_values &values) {
     }
 }
 
+void displayBatteryLevel() {
+    int8_t level = M5.Power.getBatteryLevel();
+    if (level < 0) {
+        return;
+    }
+    switch (level) {
+        case 100:
+            M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+            break;
+        case 75:
+        case 50:
+            M5.Lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
+            break;
+        default:
+            M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+    }
+    M5.Lcd.printf("Battery %d%%", level);
+}
+
 void displayLcd(scd30_measured_values &values) {
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(0, 0);
@@ -58,6 +78,12 @@ void displayLcd(scd30_measured_values &values) {
     M5.Lcd.println();
     M5.Lcd.printf("Tmp %5.1f 'c\n", values.temp);
     M5.Lcd.printf("Hum %5.1f %%\n", values.hum);
+
+    // 以下、ステータス系
+    M5.Lcd.println();
+    M5.Lcd.setTextSize(2);
+
+    displayBatteryLevel();
 }
 
 unsigned long nextMeasureTime = 0; // 次回センサ計測ms
@@ -78,8 +104,13 @@ void loop() {
         ambient.set(1, values.co2);
         ambient.set(2, values.temp);
         ambient.set(3, values.hum);
-        ambient.send();
-        Serial.println("send");
+        bool ret = ambient.send();
+        if (ret) {
+            Serial.println("send");
+
+        } else {
+            Serial.println("send error!");
+        }
         nextAmbientTime = now + 60000;
     }
 }
