@@ -94,7 +94,7 @@ void displayLcd(scd30_measured_values &values) {
     displayBatteryLevel();
     displayError();
 
-    if (values.co2 >= 1000) {
+    if (values.co2 >= 1200) {
         M5.Speaker.beep();
         delay(100);
         M5.Speaker.mute();
