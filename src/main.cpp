@@ -2,6 +2,7 @@
 #include <M5Stack.h>
 #include <SparkFun_SCD30_Arduino_Library.h>
 #include <Ambient.h>
+#include "slack.h"
 
 SCD30 scd30;
 
@@ -121,5 +122,9 @@ void loop() {
         ambient.set(3, values.hum);
         lastAmbientSendResult = ambient.send();
         nextAmbientTime = now + 60000;
+    }
+
+    if (M5.BtnA.wasPressed()) {
+        notifySlack("ふがふが", true);   // TODO: テスト送信
     }
 }
