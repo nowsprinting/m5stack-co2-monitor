@@ -4,6 +4,8 @@
 #include <Ambient.h>
 #include "slack.h"
 
+#define CO2_ALERT_THRESHOLD 1500
+
 SCD30 scd30;
 
 WiFiClient client;
@@ -45,9 +47,6 @@ struct scd30_measured_values {
 };
 
 scd30_measured_values values;
-uint16_t lastCo2 = NAN;
-
-bool lastAmbientSendResult = true;
 
 void measureSCD30(scd30_measured_values &values) {
     if (scd30.dataAvailable()) {
@@ -72,10 +71,13 @@ void displayBatteryLevel() {
     M5.Lcd.printf("Battery %d%%\n", level);
 }
 
+bool lastAmbientSendResult = true;
+
 void displayError() {
     if (!lastAmbientSendResult) {
         M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
         M5.Lcd.printf("Ambient send error!\n");
+        notifySlack("Ambientへのデータ送信に失敗しました", true);
     }
 }
 
@@ -95,10 +97,23 @@ void displayLcd(scd30_measured_values &values) {
     displayBatteryLevel();
     displayError();
 
-    if (values.co2 >= 1200) {
+    if (values.co2 >= CO2_ALERT_THRESHOLD) {
         M5.Speaker.beep();
         delay(100);
         M5.Speaker.mute();
+    }
+}
+
+uint16_t nextAlertCo2 = CO2_ALERT_THRESHOLD;
+
+void slackNotification(uint16_t co2) {
+    if (co2 >= nextAlertCo2) {
+        notifySlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
+        nextAlertCo2 += 100;
+        Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
+    } else if ((co2 < (nextAlertCo2 - 120)) && (nextAlertCo2 > CO2_ALERT_THRESHOLD)) {
+        nextAlertCo2 -= 100;
+        Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
     }
 }
 
@@ -112,6 +127,7 @@ void loop() {
     if (now > nextMeasureTime) {
         measureSCD30(values);
         displayLcd(values);
+        slackNotification(values.co2);
         Serial.println("measure");
         nextMeasureTime = now + 5000;
     }
@@ -122,9 +138,5 @@ void loop() {
         ambient.set(3, values.hum);
         lastAmbientSendResult = ambient.send();
         nextAmbientTime = now + 60000;
-    }
-
-    if (M5.BtnA.wasPressed()) {
-        notifySlack("ふがふが", true);   // TODO: テスト送信
     }
 }
