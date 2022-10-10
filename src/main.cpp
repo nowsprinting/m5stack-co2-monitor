@@ -10,6 +10,7 @@ Ambient ambient;
 
 void setup() {
     M5.begin(true, false, true, true);
+    M5.Lcd.setBrightness(10);   // デフォルトは80
 
     M5.Lcd.setTextSize(2);
     M5.Lcd.println("Initializing SCD30 sensor");
@@ -31,6 +32,9 @@ void setup() {
 
     M5.Lcd.print("Initializing Ambient");
     ambient.begin(AMBIENT_CHANNEL_ID, AMBIENT_WRITE_KEY, &client); // チャネルIDとライトキーを指定してAmbientの初期化
+
+    M5.Speaker.begin();
+    M5.Speaker.setVolume(1);  // デフォルトは8
 }
 
 struct scd30_measured_values {
@@ -89,6 +93,12 @@ void displayLcd(scd30_measured_values &values) {
     M5.Lcd.setTextSize(2);
     displayBatteryLevel();
     displayError();
+
+    if (values.co2 >= 1000) {
+        M5.Speaker.beep();
+        delay(100);
+        M5.Speaker.mute();
+    }
 }
 
 unsigned long nextMeasureTime = 0; // 次回センサ計測ms
