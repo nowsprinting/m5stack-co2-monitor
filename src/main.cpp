@@ -10,7 +10,8 @@
 #include "helper/slack.h"
 #include "co2_sensor.h"
 
-#define CO2_ALERT_THRESHOLD 1500
+#define CO2_ALERT_THRESHOLD 1400
+#define CO2_ALERT_STEP 200
 
 WiFiClient client;
 Ambient ambient;
@@ -102,13 +103,12 @@ uint16_t nextAlertCo2 = CO2_ALERT_THRESHOLD;
 void slackNotification(uint16_t co2) {
   if (co2 >= nextAlertCo2) {
     NotifyToSlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
-    nextAlertCo2 += 100;
+    nextAlertCo2 += CO2_ALERT_STEP;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
-  } else if ((co2 < (nextAlertCo2 - 120)) && (nextAlertCo2 > CO2_ALERT_THRESHOLD)) {
-    nextAlertCo2 -= 100;
+  } else if ((co2 < (nextAlertCo2 - CO2_ALERT_STEP * 1.2)) && (nextAlertCo2 > CO2_ALERT_THRESHOLD)) {
+    nextAlertCo2 -= CO2_ALERT_STEP;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
   }
-  // TODO: stepもdefineに持っていく
 }
 
 unsigned long nextMeasureTime = 0; // 次回センサ計測ms
