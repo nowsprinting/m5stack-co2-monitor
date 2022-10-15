@@ -7,7 +7,7 @@
 #include <SparkFun_SCD30_Arduino_Library.h>
 #include <Ambient.h>
 
-#include "slack.h"
+#include "helper/slack.h"
 
 #define CO2_ALERT_THRESHOLD 1500
 
@@ -82,7 +82,7 @@ void displayError() {
   if (!lastAmbientSendResult) {
     M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
     M5.Lcd.printf("Ambient send error!\n");
-    notifySlack("Ambientへのデータ送信に失敗しました", true);
+    notifyToSlack("Ambientへのデータ送信に失敗しました", true);
   }
 }
 
@@ -113,7 +113,7 @@ uint16_t nextAlertCo2 = CO2_ALERT_THRESHOLD;
 
 void slackNotification(uint16_t co2) {
   if (co2 >= nextAlertCo2) {
-    notifySlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
+    notifyToSlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
     nextAlertCo2 += 100;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
   } else if ((co2 < (nextAlertCo2 - 120)) && (nextAlertCo2 > CO2_ALERT_THRESHOLD)) {

@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 
-void notifySlack(String message, bool here) {
+void notifyToSlack(String message, bool here) {
   String body;
   if (here) {
     body = "{\"text\":\"<!here> " + message + "\"}";
