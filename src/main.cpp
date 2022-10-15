@@ -4,14 +4,13 @@
 
 #include <Arduino.h>
 #include <M5Stack.h>
-#include <SparkFun_SCD30_Arduino_Library.h>
 #include <Ambient.h>
 
+#include "helper/m5peripherals.h"
 #include "helper/slack.h"
+#include "co2_sensor.h"
 
 #define CO2_ALERT_THRESHOLD 1500
-
-SCD30 scd30;
 
 WiFiClient client;
 Ambient ambient;
@@ -19,14 +18,16 @@ Ambient ambient;
 void setup() {
   M5.begin(true, false, true, true);
   M5.Lcd.setBrightness(10);   // デフォルトは80
-
   M5.Lcd.setTextSize(2);
-  M5.Lcd.println("Initializing SCD30 sensor");
-  if (scd30.begin() == false) {
+
+#ifdef ENABLE_CO2
+  M5.Lcd.println("Initializing CO2 sensor");
+  if (SetupCo2Sensor() == false) {
     M5.Lcd.println("Air sensor not detected. Please check wiring. Freezing...");
     while (1);
   }
   //The SCD30 has data ready every two seconds
+#endif
 
   M5.Lcd.print("Initializing Wi-Fi");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  //  Wi-Fi APに接続
@@ -45,21 +46,8 @@ void setup() {
   M5.Speaker.setVolume(1);  // デフォルトは8
 }
 
-struct scd30_measured_values {
-  uint16_t co2 = NAN;
-  float temp = NAN;
-  float hum = NAN;
-};
-
-scd30_measured_values values;
-
-void measureSCD30(scd30_measured_values &values) {
-  if (scd30.dataAvailable()) {
-    values.co2 = scd30.getCO2();
-    values.temp = scd30.getTemperature();
-    values.hum = scd30.getHumidity();
-  }
-}
+// CO2センサ測定値
+co2_sensor_values values;
 
 void displayBatteryLevel() {
   int8_t level = M5.Power.getBatteryLevel();
@@ -82,11 +70,11 @@ void displayError() {
   if (!lastAmbientSendResult) {
     M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
     M5.Lcd.printf("Ambient send error!\n");
-    notifyToSlack("Ambientへのデータ送信に失敗しました", true);
+    NotifyToSlack("Ambientへのデータ送信に失敗しました", true);
   }
 }
 
-void displayLcd(scd30_measured_values &values) {
+void displayLcd() {
   M5.Lcd.fillScreen(TFT_BLACK);
   M5.Lcd.setCursor(0, 0);
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -113,13 +101,14 @@ uint16_t nextAlertCo2 = CO2_ALERT_THRESHOLD;
 
 void slackNotification(uint16_t co2) {
   if (co2 >= nextAlertCo2) {
-    notifyToSlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
+    NotifyToSlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
     nextAlertCo2 += 100;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
   } else if ((co2 < (nextAlertCo2 - 120)) && (nextAlertCo2 > CO2_ALERT_THRESHOLD)) {
     nextAlertCo2 -= 100;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
   }
+  // TODO: stepもdefineに持っていく
 }
 
 unsigned long nextMeasureTime = 0; // 次回センサ計測ms
@@ -130,17 +119,21 @@ void loop() {
   unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策が必要
 
   if (now > nextMeasureTime) {
-    measureSCD30(values);
-    displayLcd(values);
+#ifdef ENABLE_CO2
+    GetCO2(values);
+#endif
+    displayLcd();
     slackNotification(values.co2);
     Serial.println("measure");
     nextMeasureTime = now + 5000;
   }
 
   if (now > nextAmbientTime) {
-    ambient.set(1, values.co2);
-    ambient.set(2, values.temp);
-    ambient.set(3, values.hum);
+    if (values.co2 > 0) {
+      ambient.set(1, values.co2);
+      ambient.set(2, values.temp);
+      ambient.set(3, values.hum);
+    }
     lastAmbientSendResult = ambient.send();
     nextAmbientTime = now + 60000;
   }

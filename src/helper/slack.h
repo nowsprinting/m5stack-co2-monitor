@@ -7,6 +7,6 @@
 
 #include <Arduino.h>
 
-void notifyToSlack(String message, bool here);
+void NotifyToSlack(String message, bool here);
 
 #endif //M5STACK_CO2_MONITOR_SRC_HELPER_SLACK_H_
