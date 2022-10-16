@@ -10,8 +10,10 @@
 #include "helper/slack.h"
 #include "co2_sensor.h"
 
-#define CO2_ALERT_THRESHOLD 1400
-#define CO2_ALERT_STEP 200
+#define SENSOR_INTERVAL 5000
+#define AMBIENT_INTERVAL 60000
+#define CO2_ALERT_THRESHOLD 1500
+#define CO2_ALERT_STEP 100
 
 WiFiClient client;
 Ambient ambient;
@@ -121,11 +123,10 @@ void loop() {
   if (now > nextMeasureTime) {
 #ifdef ENABLE_CO2
     GetCO2(values);
+    slackNotification(values.co2);
 #endif
     displayLcd();
-    slackNotification(values.co2);
-    Serial.println("measure");
-    nextMeasureTime = now + 5000;
+    nextMeasureTime = now + SENSOR_INTERVAL;
   }
 
   if (now > nextAmbientTime) {
@@ -135,6 +136,6 @@ void loop() {
       ambient.set(3, values.hum);
     }
     lastAmbientSendResult = ambient.send();
-    nextAmbientTime = now + 60000;
+    nextAmbientTime = now + AMBIENT_INTERVAL;
   }
 }
