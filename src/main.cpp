@@ -10,10 +10,10 @@
 #include "helper/slack.h"
 #include "co2_sensor.h"
 
-#define SENSOR_INTERVAL 5000
-#define AMBIENT_INTERVAL 60000
-#define CO2_ALERT_THRESHOLD 1500
-#define CO2_ALERT_STEP 100
+const int kSensorInterval = 5000;
+const int kAmbientInterval = 60000;
+const int kCo2AlertThreshold = 1500;
+const int kCo2AlertStep = 100;
 
 WiFiClient client;
 Ambient ambient;
@@ -93,22 +93,22 @@ void displayLcd() {
   displayBatteryLevel();
   displayError();
 
-  if (values.co2 >= CO2_ALERT_THRESHOLD) {
+  if (values.co2 >= kCo2AlertThreshold) {
     M5.Speaker.beep();
     delay(100);
     M5.Speaker.mute();
   }
 }
 
-uint16_t nextAlertCo2 = CO2_ALERT_THRESHOLD;
+uint16_t nextAlertCo2 = kCo2AlertThreshold;
 
 void slackNotification(uint16_t co2) {
   if (co2 >= nextAlertCo2) {
     NotifyToSlack("部屋の二酸化炭素濃度が" + String(nextAlertCo2) + "ppmを超えました", true);
-    nextAlertCo2 += CO2_ALERT_STEP;
+    nextAlertCo2 += kCo2AlertStep;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
-  } else if ((co2 < (nextAlertCo2 - CO2_ALERT_STEP * 1.2)) && (nextAlertCo2 > CO2_ALERT_THRESHOLD)) {
-    nextAlertCo2 -= CO2_ALERT_STEP;
+  } else if ((co2 < (nextAlertCo2 - kCo2AlertStep * 1.2)) && (nextAlertCo2 > kCo2AlertThreshold)) {
+    nextAlertCo2 -= kCo2AlertStep;
     Serial.printf("Update CO2 threshold to %d", nextAlertCo2);
   }
 }
@@ -126,7 +126,7 @@ void loop() {
     slackNotification(values.co2);
 #endif
     displayLcd();
-    nextMeasureTime = now + SENSOR_INTERVAL;
+    nextMeasureTime = now + kSensorInterval;
   }
 
   if (now > nextAmbientTime) {
@@ -136,6 +136,6 @@ void loop() {
       ambient.set(3, values.hum);
     }
     lastAmbientSendResult = ambient.send();
-    nextAmbientTime = now + AMBIENT_INTERVAL;
+    nextAmbientTime = now + kAmbientInterval;
   }
 }
