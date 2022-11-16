@@ -1,8 +1,18 @@
 # m5stack-co2-monitor
 
+M5Stackで動くCO2モニタ
+
+* 一定間隔で計測結果を[Ambient](https://ambidata.io)に送信、グラフ化してWebブラウザで閲覧可能
+* CO2濃度がしきい値を超えたとき、100ppmごとにSlackに通知
+
 
 
 ## Hardware
+
+### [M5Stack](https://m5stack.com) BASICなど
+
+LCD表示をオミットすればATOMなどでも動作するはず
+
 
 ### [SCD30](https://www.sparkfun.com/products/15112)
 
@@ -36,15 +46,15 @@ I2Cアドレス：0x61
 ### CH9102F（M5Stack BASIC/FIRE v2.6のシリアルIC）macOSドライバv1.7を使用するとき
 
 ビルドしたソフトウェアをアップロードするシリアルポートを指定する必要がある。
-シリアルポート指定は、platformio.iniファイルか、PLATFORMIO_UPLOAD_PORT環境変数で行なう
+シリアルポート指定は、platformio.iniファイルに直書きするか、`PLATFORMIO_UPLOAD_PORT`環境変数で行なう
 
 参考：[PlatformIO for CLionで #M5Stack へのuploadポートを環境変数で指定する - やらなイカ？](https://www.nowsprinting.com/entry/2022/10/09/020549)
 
 
 ### ビルドフラグを上書きするとき
 
-ビルドフラグは、 platformio.iniにある設定をPLATFORMIO_BUILD_FLAGS環境変数で上書きできる。
-ただし、PlatformIO for CLion v222.3739.54時点では指定できない。CLion起動前に設定するか、build & uploadをCLIで実行する
+ビルドフラグは、 platformio.iniにある設定を`PLATFORMIO_BUILD_FLAGS`環境変数で上書きできる。
+ただし、PlatformIO for CLion v222.3739.54時点ではGUIで指定できない。CLion起動前に設定するか、build & uploadをCLIで実行する
 
 #### Makefileの例
 
@@ -60,3 +70,5 @@ upload-atom:
 	PLATFORMIO_BUILD_FLAGS='-D M5STACK_ATOM_LITE -D WIFI_SSID=\"SSID\" -D WIFI_PASSWORD=\"PWD\"' \
 	pio run --target upload --environment m5stack-atom
 ```
+
+※Makefileは.gitignoreでトラック対象外にしてあります
