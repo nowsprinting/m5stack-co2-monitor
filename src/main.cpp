@@ -124,6 +124,11 @@ void loop() {
 
     if (M5.BtnC.wasPressed()) {
         beep = !beep;
+        if (beep) {
+            M5.Speaker.beep();
+            delay(100);
+            M5.Speaker.mute();
+        }
     }
 
     if (now > nextMeasureTime) {
