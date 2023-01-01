@@ -77,6 +77,8 @@ void displayError() {
     }
 }
 
+bool beep = true;
+
 void displayLcd() {
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(0, 0);
@@ -93,7 +95,7 @@ void displayLcd() {
     displayBatteryLevel();
     displayError();
 
-    if (values.co2 >= kCo2AlertThreshold) {
+    if (beep && values.co2 >= kCo2AlertThreshold) {
         M5.Speaker.beep();
         delay(100);
         M5.Speaker.mute();
@@ -119,6 +121,10 @@ unsigned long nextAmbientTime = 0; // 次回Ambient送信ms
 void loop() {
     M5.update();
     unsigned long now = millis();   // TODO: ラップアラウンドするのであれば対策が必要
+
+    if (M5.BtnC.wasPressed()) {
+        beep = !beep;
+    }
 
     if (now > nextMeasureTime) {
 #ifdef ENABLE_CO2
