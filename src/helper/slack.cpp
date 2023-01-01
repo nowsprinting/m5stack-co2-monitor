@@ -8,23 +8,23 @@
 #include <HTTPClient.h>
 
 void NotifyToSlack(String message, bool here) {
-  String body;
-  if (here) {
-    body = "{\"text\":\"<!here> " + message + "\"}";
-  } else {
-    body = "{\"text\":\"" + message + "\"}";
-  }
+    String body;
+    if (here) {
+        body = "{\"text\":\"<!here> " + message + "\"}";
+    } else {
+        body = "{\"text\":\"" + message + "\"}";
+    }
 
-  HTTPClient httpClient;
-  httpClient.begin(SLACK_WEBHOOK_URL);
-  httpClient.addHeader("Content-Type", "application/json");
+    HTTPClient httpClient;
+    httpClient.begin(SLACK_WEBHOOK_URL);
+    httpClient.addHeader("Content-Type", "application/json");
 
-  int status = httpClient.POST(body);
-  if (status == 200) {
-    String response = httpClient.getString();
-    Serial.printf("Slack notification send\n");
-  } else {
-    Serial.printf("Slack send error! status code: %d\n", status);
-  }
-  httpClient.end();
+    int status = httpClient.POST(body);
+    if (status == 200) {
+        String response = httpClient.getString();
+        Serial.printf("Slack notification send\n");
+    } else {
+        Serial.printf("Slack send error! status code: %d\n", status);
+    }
+    httpClient.end();
 }
